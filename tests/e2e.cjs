@@ -163,7 +163,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await m.click('.ed-switch [data-tab="preview"]');
   await m.screenshot({ path: path.join(SHOTS, "preview-375.png"), fullPage: true });
 
-  for (const slug of ["about/", "privacy/", "terms/", "refunds/"]) {
+  for (const slug of ["about/", "privacy/", "terms/", "refunds/", "thanks/"]) {
     await m.goto(base + slug, { waitUntil: "networkidle" });
     check(await m.locator("h1").count() === 1, slug + " renders");
   }
