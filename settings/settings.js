@@ -78,7 +78,7 @@
     var box = $("pro-body");
     if (L.isPro()) {
       box.innerHTML = '<p><span class="pill green">Active</span> Pro is unlocked on this device (key ' + esc(L.maskedKey()) + "). Thank you for supporting honest software.</p>" +
-        '<p class="muted">Using another device? Enter the same key there. Need help or a refund? Write to us from the email on your receipt.</p>' +
+        '<p class="muted">Using another device? Enter the same key there. Need help or a refund? Write to <a href="mailto:fairmeasuresupport@gmail.com">fairmeasuresupport@gmail.com</a>.</p>' +
         '<div><button type="button" class="btn ghost small" id="pro-off">Remove the key from this device</button></div>';
       $("pro-off").addEventListener("click", function () {
         FM.confirm({ title: "Remove Pro from this device?", body: "Your data stays. You can enter the key again any time.", ok: "Remove" }).then(function (y) { if (y) { L.deactivate(); renderPro(); fillProfile(); } });

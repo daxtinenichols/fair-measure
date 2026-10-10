@@ -5,6 +5,7 @@
   "use strict";
   var FM = (window.FM = window.FM || {});
   var script = document.currentScript;
+  FM.contact = "fairmeasuresupport@gmail.com";
   FM.root = script ? script.src.replace(/shared\/chrome\.js(\?.*)?$/, "") : "/";
 
   // The one list of tools. The home page, the header menu and the footer all read it.
@@ -76,6 +77,7 @@
       '<li><a href="' + link("privacy/") + '">Privacy</a></li>' +
       '<li><a href="' + link("terms/") + '">Terms of sale</a></li>' +
       '<li><a href="' + link("refunds/") + '">Refunds</a></li>' +
+      '<li><a href="mailto:' + FM.contact + '">' + FM.contact + "</a></li>" +
       "</ul></div>" +
       '<p class="legal">&copy; ' + year + " Fair Measure. Your business data stays in your browser on your device. " +
       "Our tools help with paperwork and arithmetic; they are not legal, tax or accounting advice.</p></div>";

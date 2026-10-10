@@ -9,8 +9,8 @@
   // Filled in once the store is set up. While checkoutUrl is empty, Pro shows "coming soon".
   var CONFIG = {
     provider: "polar",          // "polar" or "lemonsqueezy"
-    organizationId: "",         // Polar organization id
-    checkoutUrl: "",            // link to the Pro checkout page
+    organizationId: "ef5064c9-d81a-46af-9ba9-325eb2518d9a",  // Polar organization id
+    checkoutUrl: "https://buy.polar.sh/polar_cl_VPC9irBkceybQZTJk6rRcruHP02VxBSbODokR3oouJ9",
     verifyUrl: "",              // optional: our own small verify endpoint, if the store blocks browser calls
     price: "$49",
     recheckDays: 30

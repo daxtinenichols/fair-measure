@@ -42,7 +42,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await page.goto(base, { waitUntil: "networkidle" });
   check(await page.locator(".tool").count() === 6, "six tool cards");
   check(await page.locator("#fm-top .fm-brand").isVisible(), "header renders");
-  check((await page.textContent("#buy-pro")).includes("coming soon"), "Pro shows coming soon until the store is set up");
+  check((await page.getAttribute("#buy-pro", "href")).startsWith("https://buy.polar.sh/"), "Get Pro links to the Polar checkout");
   const fontOk = await page.evaluate(() => document.fonts.check("600 20px Fraunces"));
   check(fontOk, "self-hosted Fraunces loads");
   await page.screenshot({ path: path.join(SHOTS, "home-1440.png"), fullPage: true });
