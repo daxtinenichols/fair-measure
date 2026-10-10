@@ -6,7 +6,7 @@
   "use strict";
   var FM = (window.FM = window.FM || {});
   var PREFIX = "fm.v1.";
-  var COLLECTIONS = ["customers", "items", "documents"];
+  var COLLECTIONS = ["customers", "items", "documents", "cash", "trips"];
   var listeners = [];
 
   function read(key, fallback) {
