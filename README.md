@@ -8,6 +8,7 @@ Honest, private, pay-once tools for small businesses. Live at https://daxtinenic
 |------|------------|
 | `index.html` | Home page: tools, pricing, questions |
 | `invoices/` | Quotes & Invoices, the first tool |
+| `customers/` | Customer Book: notes, follow-ups, contact import and statements on the shared customer list |
 | `pricing/` | Price Builder: cost out a product or job and save the price to the shared items list |
 | `settings/` | My business: shared business details, Pro license, backup and restore |
 | `about/`, `privacy/`, `terms/`, `refunds/` | About and legal pages |
@@ -36,6 +37,7 @@ No build step, no framework, no third-party scripts, no cookies, no tracking. Ev
 ```
 node tests/calc.test.js        # invoice arithmetic
 node tests/pricing.test.js     # Price Builder arithmetic
+node tests/customers.test.js   # Customer Book logic
 node tests/e2e.cjs             # browser test with Playwright (npm install first), screenshots in tests/shots/
 ```
 
