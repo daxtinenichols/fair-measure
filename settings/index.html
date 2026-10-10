@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My business | Fair Measure</title>
+<meta name="description" content="Your business details, Fair Measure Pro, and backups. Everything is stored on this device.">
+<meta name="theme-color" content="#fbf8f3">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="robots" content="noindex">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://api.polar.sh https://api.lemonsqueezy.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<link rel="icon" href="../shared/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../shared/fonts/fonts.css">
+<link rel="stylesheet" href="../shared/fm.css">
+<style>
+  .set { padding-top: 40px; display: grid; gap: 22px; }
+  .set-head p { margin-top: 8px; max-width: 60ch; }
+  .set section { display: grid; gap: 16px; scroll-margin-top: 90px; }
+  .set h2 { font-size: 26px; }
+  .logo-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .logo-box { width: 132px; height: 76px; border: 1px dashed var(--line); border-radius: 12px; display: grid; place-items: center; background: #fff; overflow: hidden; color: var(--muted); font-size: 14px; }
+  .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .pro-box { display: grid; gap: 14px; background: linear-gradient(135deg, #fffdf8 0%, #f8f0de 100%); border-color: #ead9b0; }
+  .pro-box ul { margin: 0; padding-left: 20px; color: var(--muted); }
+  .key-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .key-row input { flex: 1 1 260px; }
+  .err { color: var(--rose); font-size: 15px; }
+  input[type="color"] { padding: 4px; width: 64px; min-height: 46px; }
+  .pro-only { font-size: 13px; }
+  .save-bar { position: sticky; bottom: 0; padding: 14px 0; background: linear-gradient(180deg, rgba(251,248,243,0) 0%, var(--paper) 40%); display: flex; gap: 12px; align-items: center; }
+</style>
+<script src="../shared/chrome.js"></script>
+<script src="../shared/store.js"></script>
+<script src="../shared/license.js"></script>
+<script src="settings.js" defer></script>
+</head>
+<body data-page="settings">
+<a class="skip" href="#main">Skip to content</a>
+<header id="fm-top"></header>
+<main id="main">
+  <div class="wrap narrow set">
+    <div class="set-head">
+      <h1>My business</h1>
+      <p class="muted">These details appear on your documents and are shared by every Fair Measure tool. They're kept on this device only.</p>
+    </div>
+
+    <form id="profile" class="card" autocomplete="on" novalidate>
+      <section>
+        <h2>Your details</h2>
+        <div class="grid-2">
+          <label class="field"><span>Business name</span><input name="name" autocomplete="organization"></label>
+          <label class="field"><span>Your name</span><input name="owner" autocomplete="name"><small>Used to sign off emails.</small></label>
+          <label class="field"><span>Email</span><input type="email" name="email" autocomplete="email"></label>
+          <label class="field"><span>Phone</span><input type="tel" name="phone" autocomplete="tel"></label>
+        </div>
+        <label class="field"><span>Address</span><textarea name="address" rows="3" autocomplete="street-address"></textarea></label>
+        <div class="grid-2">
+          <label class="field"><span>Website</span><input name="website" autocomplete="url"></label>
+          <label class="field"><span>Tax ID <i class="muted">(optional, shown on documents)</i></span><input name="taxId"></label>
+        </div>
+      </section>
+
+      <section>
+        <h2>Look</h2>
+        <div class="logo-row">
+          <div class="logo-box" id="logo-box">No logo</div>
+          <div class="row">
+            <label class="btn ghost small" for="logo-file">Choose a logo</label>
+            <input id="logo-file" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="sr">
+            <button type="button" class="btn ghost small" id="logo-clear">Remove</button>
+          </div>
+        </div>
+        <label class="field"><span>Accent color</span><div class="row"><input type="color" name="accent"><small class="pro-only muted" id="look-note"></small></div></label>
+      </section>
+
+      <section>
+        <h2>Money and numbering</h2>
+        <div class="grid-3">
+          <label class="field"><span>Currency</span><select name="currency"></select></label>
+          <label class="field"><span>Tax name</span><input name="taxLabel"></label>
+          <label class="field"><span>Usual tax rate (%)</span><input name="taxRate" inputmode="decimal"></label>
+          <label class="field"><span>Days to pay invoices</span><input name="termsDays" inputmode="numeric"></label>
+          <label class="field"><span>Days a quote is good</span><input name="quoteValidDays" inputmode="numeric"></label>
+          <span></span>
+          <label class="field"><span>Invoice prefix</span><input name="invoicePrefix"></label>
+          <label class="field"><span>Next invoice number</span><input name="nextInvoice" inputmode="numeric"></label>
+          <span></span>
+          <label class="field"><span>Quote prefix</span><input name="quotePrefix"></label>
+          <label class="field"><span>Next quote number</span><input name="nextQuote" inputmode="numeric"></label>
+        </div>
+        <label class="field"><span>How customers pay you</span><textarea name="paymentInstructions" rows="3" placeholder="e.g. Check payable to Hollow Oak Carpentry, or Zelle to (512) 555-0140"></textarea><small>Printed on every invoice.</small></label>
+      </section>
+      <div class="save-bar"><button class="btn" type="submit">Save my details</button><span class="muted" id="saved-note" aria-live="polite"></span></div>
+    </form>
+
+    <section id="pro" class="card pro-box">
+      <h2>Fair Measure Pro</h2>
+      <div id="pro-body"></div>
+    </section>
+
+    <section id="backup" class="card">
+      <h2>Backup and moving devices</h2>
+      <p class="muted">Your whole business book (details, customers, items and documents) fits in one small file. Keep a copy somewhere safe, or open it on another device to carry on there.</p>
+      <p class="muted" id="last-backup"></p>
+      <div class="row">
+        <button type="button" class="btn" id="do-backup">Download backup</button>
+        <label class="btn ghost" for="restore-file">Restore from a backup</label>
+        <input id="restore-file" type="file" accept="application/json,.json" class="sr">
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Start over</h2>
+      <p class="muted">Erase every Fair Measure record on this device. Download a backup first if you might want it later.</p>
+      <div><button type="button" class="btn danger" id="erase">Erase everything on this device</button></div>
+    </section>
+  </div>
+</main>
+<footer id="fm-foot"></footer>
+</body>
+</html>
