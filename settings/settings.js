@@ -89,7 +89,7 @@
       ? '<a class="btn gold" href="' + esc(L.config.checkoutUrl) + '" rel="noopener">Get Pro for ' + esc(L.config.price) + " once</a>"
       : '<span class="pill gold">Coming soon</span>';
     box.innerHTML = "<p>One payment of " + esc(L.config.price) + " unlocks every tool, with no subscription.</p>" +
-      "<ul><li>Unlimited customers, items, quotes and invoices</li><li>Your logo and color on documents, without our footer line</li><li>Every new tool for two years, and it keeps working forever</li><li>30-day refund, no questions asked</li></ul>" +
+      "<ul><li>Unlimited customers, items, prices, quotes and invoices</li><li>Your logo and color on documents, without our footer line</li><li>Every new tool for two years, and it keeps working forever</li><li>30-day refund, no questions asked</li></ul>" +
       "<div>" + buy + "</div>" +
       '<form id="key-form" class="field" novalidate><span>Already bought it? Enter your license key</span>' +
       '<div class="key-row"><input name="key" autocomplete="off" spellcheck="false" placeholder="From your receipt email"><button class="btn" type="submit">Unlock Pro</button></div>' +
