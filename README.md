@@ -23,7 +23,8 @@ Honest, private, pay-once tools for small businesses. Live at https://daxtinenic
 
 1. Make a folder, copy the `<head>` from `invoices/index.html` (it carries the Content-Security-Policy), and load `shared/chrome.js`, `store.js` and `license.js`.
 2. Read and write shared records through `FM.store`; add a new collection to `COLLECTIONS` in `store.js` if the tool needs one.
-3. Flip the tool's entry in `FM.tools` (in `chrome.js`) to `status: "live"` with its `path`, and add it to `sitemap.xml`.
+3. When you change anything in `shared/`, bump the `?v=` number on every page that loads it, so browsers fetch the new copy instead of a cached one.
+4. Flip the tool's entry in `FM.tools` (in `chrome.js`) to `status: "live"` with its `path`, and add it to `sitemap.xml`.
 
 ## Principles
 
