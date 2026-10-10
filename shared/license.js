@@ -10,7 +10,7 @@
   var CONFIG = {
     provider: "polar",          // "polar" or "lemonsqueezy"
     organizationId: "ef5064c9-d81a-46af-9ba9-325eb2518d9a",  // Polar organization id
-    checkoutUrl: "https://buy.polar.sh/polar_cl_VPC9irBkceybQZTJk6rRcruHP02VxBSbODokR3oouJ9",
+    checkoutUrl: "https://buy.polar.sh/polar_cl_gdVg4C9uSPMgkhVyhwQIQ1MbPqPt8T4S9neWq2qsFKD",
     verifyUrl: "",              // optional: our own small verify endpoint, if the store blocks browser calls
     price: "$49",
     recheckDays: 30
