@@ -58,6 +58,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await page.fill('dialog input[name="taxRate"]', "8");
   await page.fill('dialog textarea[name="paymentInstructions"]', "Check payable to Hollow Oak Carpentry, or Zelle to (518) 555-0140.");
   await page.click('dialog button[value="ok"]');
+  await page.locator(".from-card").waitFor({ timeout: 5000 }).catch(() => {});
   check(await page.locator(".from-card").isVisible(), "business details saved");
 
   await page.fill('[data-f="customer.name"]', "Margaret Kelly");
@@ -123,6 +124,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await page.waitForTimeout(300);
   check(await page.locator("dialog.fm-dialog").isVisible(), "limit dialog at 10 documents");
   await page.click('dialog button[value="no"]');
+  await page.locator("dialog.fm-dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
 
   console.log("settings and backup");
   await page.goto(base + "settings/", { waitUntil: "networkidle" });
