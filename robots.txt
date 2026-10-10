@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
 Disallow: /fair-measure/settings/
+Disallow: /fair-measure/thanks/
 Sitemap: https://daxtinenichols.github.io/fair-measure/sitemap.xml
