@@ -8,6 +8,7 @@ Honest, private, pay-once tools for small businesses. Live at https://daxtinenic
 |------|------------|
 | `index.html` | Home page: tools, pricing, questions |
 | `invoices/` | Quotes & Invoices, the first tool |
+| `pricing/` | Price Builder: cost out a product or job and save the price to the shared items list |
 | `settings/` | My business: shared business details, Pro license, backup and restore |
 | `about/`, `privacy/`, `terms/`, `refunds/` | About and legal pages |
 | `shared/` | Code and styles every tool uses |
@@ -15,7 +16,7 @@ Honest, private, pay-once tools for small businesses. Live at https://daxtinenic
 ### Shared pieces (every tool loads these)
 
 - `shared/chrome.js`: header, footer, the one list of tools (`FM.tools`), toast and confirm dialog. Builds links from the site root, so the site works under `/fair-measure/` and on a custom domain.
-- `shared/store.js`: the business book. One store in the browser's localStorage (keys `fm.v1.*`) holding the business profile, `customers`, `items` and `documents`. Tools share records through it, and one backup file holds everything. Money is whole cents.
+- `shared/store.js`: the business book. One store in the browser's localStorage (keys `fm.v1.*`) holding the business profile, `customers`, `items`, `documents` and `costings` (Price Builder). Tools share records through it, and one backup file holds everything. Money is whole cents.
 - `shared/license.js`: Pro unlock. Set `checkoutUrl` and `organizationId` once the store exists; until then Pro shows "coming soon". Free limits live here too.
 - `shared/fm.css`, `shared/fonts/`: design tokens and self-hosted fonts (Fraunces and Source Sans 3, SIL Open Font License).
 
@@ -33,7 +34,8 @@ No build step, no framework, no third-party scripts, no cookies, no tracking. Ev
 ## Tests
 
 ```
-node tests/calc.test.js        # arithmetic
+node tests/calc.test.js        # invoice arithmetic
+node tests/pricing.test.js     # Price Builder arithmetic
 node tests/e2e.cjs             # browser test with Playwright (npm install first), screenshots in tests/shots/
 ```
 
