@@ -8,6 +8,7 @@ Honest, private, pay-once tools for small businesses. Live at https://daxtinenic
 |------|------------|
 | `index.html` | Home page: tools, pricing, questions |
 | `invoices/` | Quotes & Invoices, the first tool |
+| `pricing/` | Price Builder: cost out a product or job and save the price to the shared items list |
 | `cash/` | Cash Book: money in and out, mileage log, quarterly tax set-aside, year-end Schedule C summary |
 | `settings/` | My business: shared business details, Pro license, backup and restore |
 | `about/`, `privacy/`, `terms/`, `refunds/` | About and legal pages |
@@ -16,7 +17,7 @@ Honest, private, pay-once tools for small businesses. Live at https://daxtinenic
 ### Shared pieces (every tool loads these)
 
 - `shared/chrome.js`: header, footer, the one list of tools (`FM.tools`), toast and confirm dialog. Builds links from the site root, so the site works under `/fair-measure/` and on a custom domain.
-- `shared/store.js`: the business book. One store in the browser's localStorage (keys `fm.v1.*`) holding the business profile, `customers`, `items`, `documents`, and Cash Book's `cash` entries and `trips`. Tools share records through it, and one backup file holds everything. Money is whole cents.
+- `shared/store.js`: the business book. One store in the browser's localStorage (keys `fm.v1.*`) holding the business profile, `customers`, `items`, `documents`, `costings` (Price Builder), and `cash` entries and `trips` (Cash Book). Tools share records through it, and one backup file holds everything. Money is whole cents.
 - `shared/license.js`: Pro unlock. Set `checkoutUrl` and `organizationId` once the store exists; until then Pro shows "coming soon". Free limits live here too.
 - `shared/fm.css`, `shared/fonts/`: design tokens and self-hosted fonts (Fraunces and Source Sans 3, SIL Open Font License).
 
@@ -35,6 +36,7 @@ No build step, no framework, no third-party scripts, no cookies, no tracking. Ev
 
 ```
 node tests/calc.test.js        # invoice arithmetic
+node tests/pricing.test.js     # Price Builder arithmetic
 node tests/cash.test.js        # Cash Book arithmetic
 node tests/e2e.cjs             # browser test with Playwright (npm install first), screenshots in tests/shots/
 ```

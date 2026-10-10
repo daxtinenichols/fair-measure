@@ -195,6 +195,55 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await page.locator("dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
   await page.evaluate(() => FM.store.raw.write("cash", FM.store.all("cash").filter((e) => e.date !== "2026-01-02")));
 
+  console.log("price builder");
+  await page.goto(base + "pricing/", { waitUntil: "networkidle" });
+  check(await page.locator(".start").count() === 2, "price builder offers product or service");
+  await page.screenshot({ path: path.join(SHOTS, "pricing-start-1440.png"), fullPage: true });
+  await page.click('.start >> nth=0');
+  await page.fill('[data-f="name"]', "Sourdough loaf");
+  await page.fill('[data-f="yield"]', "8");
+  await page.fill('[data-f="unit"]', "loaf");
+  await page.fill('#materials .line[data-i="0"] [data-lf="name"]', "Bread flour, per lb");
+  await page.fill('#materials .line[data-i="0"] [data-lf="qty"]', "4");
+  await page.fill('#materials .line[data-i="0"] [data-lf="cost"]', "0.80");
+  await page.click('[data-act="add-material"]');
+  await page.fill('#materials .line[data-i="1"] [data-lf="name"]', "Starter, salt and bags");
+  await page.fill('#materials .line[data-i="1"] [data-lf="cost"]', "2.40");
+  check((await page.inputValue('#labor .line[data-i="0"] [data-lf="rate"]')) === "25.00", "wage starts at a fair default");
+  await page.fill('#labor .line[data-i="0"] [data-lf="hours"]', "1:30");
+  await page.click('[data-act="overhead-help"]');
+  await page.fill('dialog input[name="monthly"]', "600");
+  check((await page.textContent("dialog .oh-out")).includes("$5.00"), "running costs work out to $5.00 an hour");
+  await page.click('dialog button[value="ok"]');
+  await page.click('[data-fee="online"]');
+  // (560 + 3750 + 750) / 8 = 632.5 a loaf; (632.5 + 30) / (1 - 0.029 - 0.20) = 859.27, rounded up to 8.75
+  check((await page.textContent("#the-price")).includes("8.75"), "suggested price is $8.75 a loaf (got " + (await page.textContent("#the-price")) + ")");
+  check(await page.locator(".notice.green-n").isVisible(), "says the price is healthy");
+  await page.waitForFunction(() => document.getElementById("saved").textContent === "Saved", null, { timeout: 5000 }).catch(() => {});
+  check(/#p\//.test(page.url()), "price is saved as you type");
+  await page.click('[data-act="save-item"]');
+  const item = await page.evaluate(() => FM.store.all("items").find((i) => i.name === "Sourdough loaf"));
+  check(item && item.price === 875 && item.unit === "loaf" && item.cost === 633, "saved to the shared items list with its cost");
+  check((await page.textContent("#item-state")).includes("$8.75"), "shows it's on the items list");
+  await page.screenshot({ path: path.join(SHOTS, "pricing-edit-1440.png"), fullPage: true });
+  await page.fill('[data-f="price"]', "6.50");
+  check(await page.locator(".notice.rose-n").isVisible(), "warns when a price loses money");
+  check((await page.textContent("#save-label")) === "Update my items", "offers to update the item after a price change");
+  await page.fill('[data-f="price"]', "");
+  await page.click('[data-kind="service"]');
+  check(await page.locator('[data-f="yield"]').count() === 0, "services have no batch size");
+  await page.click('[data-kind="product"]');
+  await page.fill('[data-f="yield"]', "8");
+  await page.waitForFunction(() => document.getElementById("saved").textContent === "Saved", null, { timeout: 5000 }).catch(() => {});
+  await page.goto(base + "pricing/#", { waitUntil: "networkidle" });
+  await page.waitForTimeout(200);
+  check(await page.locator(".price-row").count() === 1, "one saved price listed");
+  check((await page.textContent(".price-row")).includes("In my items"), "list shows it's in my items");
+  await page.screenshot({ path: path.join(SHOTS, "pricing-list-1440.png"), fullPage: true });
+  await page.goto(base + "invoices/#items");
+  await page.waitForTimeout(200);
+  check((await page.textContent(".items")).includes("$8.75"), "Quotes & Invoices sees the new item");
+
   console.log("free limit");
   await page.evaluate(() => { for (let i = 0; i < 7; i++) FM.store.put("documents", { type: "invoice", status: "draft", number: "X" + i, lines: [], customer: { name: "T" } }); });
   await page.goto(base + "invoices/#new");
@@ -222,7 +271,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
 
   console.log("phone");
   const phone = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-  await phone.addInitScript((d) => { if (!localStorage.getItem("fm.v1.profile")) { localStorage.setItem("fm.v1.profile", JSON.stringify(d.profile)); localStorage.setItem("fm.v1.documents", JSON.stringify(d.documents)); localStorage.setItem("fm.v1.customers", JSON.stringify(d.customers)); localStorage.setItem("fm.v1.items", JSON.stringify(d.items)); localStorage.setItem("fm.v1.cash", JSON.stringify(d.cash)); localStorage.setItem("fm.v1.trips", JSON.stringify(d.trips)); } }, data);
+  await phone.addInitScript((d) => { if (!localStorage.getItem("fm.v1.profile")) { localStorage.setItem("fm.v1.profile", JSON.stringify(d.profile)); ["documents", "customers", "items", "costings", "cash", "trips"].forEach((c) => localStorage.setItem("fm.v1." + c, JSON.stringify(d[c] || []))); } }, data);
   const m = await phone.newPage();
   watch(m, "phone");
   await m.goto(base, { waitUntil: "networkidle" });
@@ -247,6 +296,13 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await m.waitForTimeout(200);
   check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone year-end summary");
   await m.screenshot({ path: path.join(SHOTS, "cash-year-375.png"), fullPage: true });
+  await m.goto(base + "pricing/", { waitUntil: "networkidle" });
+  await m.click(".price-row >> nth=0");
+  await m.waitForTimeout(200);
+  check((await m.textContent("#mini-price")).includes("8.75"), "phone shows the price in the bottom bar");
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone price builder");
+  await m.screenshot({ path: path.join(SHOTS, "pricing-375.png"), fullPage: true });
+  await m.screenshot({ path: path.join(SHOTS, "pricing-375-fold.png") });
 
   for (const slug of ["about/", "privacy/", "terms/", "refunds/", "thanks/"]) {
     await m.goto(base + slug, { waitUntil: "networkidle" });
