@@ -751,6 +751,7 @@
         '<p class="muted">' + esc([c.email, c.phone].filter(Boolean).join(" · ")) + "</p>" +
         '<p class="person-stats">' + mine.length + (mine.length === 1 ? " document" : " documents") + (owed ? ' · <span class="owed">' + fmt(owed) + " owed</span>" : "") + "</p></div>" +
         '<div class="person-actions"><a class="btn small" href="#new?c=' + esc(c.id) + '">New invoice</a><a class="btn small ghost" href="#new-quote?c=' + esc(c.id) + '">New quote</a>' +
+        '<a class="btn small ghost" href="' + FM.link("customers/") + "#c/" + esc(c.id) + '">Notes</a>' +
         '<button class="btn small ghost" data-act="edit-c">Edit</button><button class="icon-btn" data-act="del-c" aria-label="Delete ' + esc(c.name) + '">' + ICON.trash + "</button></div></div>";
     }).join("");
     app.innerHTML = shell("customers", '<div class="wrap"><div class="list-bar"><p class="muted">Customers are added automatically from your quotes and invoices. They\'re shared with every Fair Measure tool.</p>' +
