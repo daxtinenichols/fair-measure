@@ -3,7 +3,7 @@
   "private": true,
   "description": "Fair Measure site. No build step; this file only exists for the tests.",
   "scripts": {
-    "test": "node tests/calc.test.js && node tests/customers.test.js && node tests/e2e.cjs"
+    "test": "node tests/calc.test.js && node tests/pricing.test.js && node tests/customers.test.js && node tests/e2e.cjs"
   },
   "devDependencies": {
     "playwright": "1.56.1"

@@ -12,7 +12,7 @@
   FM.tools = [
     { id: "invoices", name: "Quotes & Invoices", path: "invoices/", status: "live",
       blurb: "Clean quotes and invoices in minutes. Saved customers and items, tax, deposits, and a printout you'll be proud to send." },
-    { id: "pricing", name: "Price Builder", path: "", status: "soon",
+    { id: "pricing", name: "Price Builder", path: "pricing/", status: "live",
       blurb: "Cost out a product or a job, pay yourself a fair wage, and see the price that keeps your doors open." },
     { id: "customers", name: "Customer Book", path: "customers/", status: "live",
       blurb: "Every customer, note and follow-up in one quiet place, filled in automatically from your quotes and invoices." },
@@ -44,6 +44,7 @@
     var nav = [
       ["", "Home", "home"],
       ["invoices/", "Quotes & Invoices", "invoices"],
+      ["pricing/", "Price Builder", "pricing"],
       ["#tools", "All tools", "tools"],
       ["settings/", "My business", "settings"]
     ];
