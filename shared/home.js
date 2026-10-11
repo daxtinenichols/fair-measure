@@ -9,6 +9,7 @@
     cash: '<rect x="5" y="9" width="22" height="15" rx="3"/><circle cx="16" cy="16.5" r="3.5"/><path d="M9 13v7M23 13v7"/>',
     shifts: '<rect x="5" y="7" width="22" height="20" rx="3"/><path d="M5 13h22M11 4v5M21 4v5M10 18h4M10 22h4M18 18h4"/>',
     shopfront: '<path d="M5 13l2-7h18l2 7"/><path d="M5 13c0 2 1.5 3.5 3.7 3.5S12.3 15 12.3 13c0 2 1.6 3.5 3.7 3.5s3.7-1.5 3.7-3.5c0 2 1.5 3.5 3.6 3.5S27 15 27 13"/><path d="M7 16.5V27h18V16.5M13 27v-6h6v6"/>',
+    stock: '<path d="M5 11l11-6 11 6v12l-11 6-11-6z"/><path d="M5 11l11 6 11-6M16 17v12M10.5 8l11 6"/>',
     time: '<circle cx="16" cy="17.5" r="9.5"/><path d="M16 12v5.5l3.5 2.5M13 4.5h6M16 4.5v3.5"/>'
   };
   document.addEventListener("DOMContentLoaded", function () {
