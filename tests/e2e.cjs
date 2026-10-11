@@ -318,6 +318,56 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await page.waitForTimeout(200);
   check((await page.textContent(".items")).includes("$8.75"), "Quotes & Invoices sees the new item");
 
+  console.log("shopfront studio");
+  await page.goto(base + "shopfront/", { waitUntil: "networkidle" });
+  check(await page.locator(".kind").count() === 7, "shopfront asks one question: the kind of business");
+  await page.screenshot({ path: path.join(SHOTS, "shopfront-start-1440.png"), fullPage: true });
+  await page.click('.kind[data-kind="food"]');
+  await page.waitForSelector("#pv");
+  const pvText = async (sel) => page.frameLocator("#pv").locator(sel).first().textContent({ timeout: 5000 }).catch(() => "");
+  check((await pvText("h1")) === "Hollow Oak Carpentry", "preview is built from the business name");
+  check((await pvText("#offer")).includes("$8.75"), "preview lists prices from the shared items");
+  await page.fill('[data-f="intro"]', "Fresh sourdough and honest carpentry, from our family to yours.");
+  await page.waitForFunction(() => (document.getElementById("pv").srcdoc || "").includes("Fresh sourdough and honest"), null, { timeout: 5000 }).catch(() => {});
+  check((await pvText(".lede")).startsWith("Fresh sourdough"), "preview follows what you type");
+  await page.click("#sec-hours summary");
+  await page.click('[data-preset="weekdays"]');
+  await page.waitForTimeout(400);
+  check((await pvText(".hours")).includes("Mon – Fri"), "weekday hours appear on the site");
+  await page.click("#sec-offer summary");
+  await page.fill('#item-add input[name="name"]', "Gift card");
+  await page.fill('#item-add input[name="price"]', "25");
+  await page.click("#item-add button");
+  await page.waitForTimeout(300);
+  check(await page.evaluate(() => { const it = FM.store.all("items").find((i) => i.name === "Gift card"); return !!it && it.price === 2500 && FM.store.all("sites")[0].offer.itemIds.includes(it.id); }), "a new item lands on the shared list and the site");
+  const swatch = await page.screenshot({ type: "png", clip: { x: 0, y: 0, width: 320, height: 240 } });
+  await page.setInputFiles("#hero-file", { name: "shop.png", mimeType: "image/png", buffer: swatch });
+  await page.waitForSelector(".hero-pick img", { timeout: 5000 }).catch(() => {});
+  check(await page.evaluate(() => /^data:image\/jpeg;base64,/.test(FM.store.all("sites")[0].heroPhoto.src)), "main photo is shrunk and stored as a JPEG");
+  await page.fill('[data-f="heroPhoto.alt"]', "Our shop on Mill Street");
+  await page.waitForFunction(() => document.getElementById("saved").textContent === "Saved", null, { timeout: 5000 }).catch(() => {});
+  await page.screenshot({ path: path.join(SHOTS, "shopfront-edit-1440.png") });
+  const [site] = await Promise.all([page.waitForEvent("download"), page.click('[data-act="download"]')]);
+  check(site.suggestedFilename() === "index.html", "site downloads as index.html");
+  const siteHtml = fs.readFileSync(await site.path(), "utf8");
+  check(siteHtml.includes("data:font/woff2;base64,") && !/<script(?![^>]*ld\+json)/.test(siteHtml), "downloaded site carries its fonts and no scripts");
+  const sp = await ctx.newPage();
+  watch(sp, "published site");
+  await sp.setContent(siteHtml, { waitUntil: "load" });
+  check(await sp.evaluate(() => document.fonts.ready.then(() => document.fonts.check("600 20px Fraunces"))), "published site shows its own fonts");
+  check((await sp.textContent(".hours")).includes("9 am – 5 pm") && (await sp.locator(".hero-img img").count()) === 1, "published site has hours and the photo");
+  await sp.screenshot({ path: path.join(SHOTS, "shopfront-site-1440.png"), fullPage: true });
+  await sp.setViewportSize({ width: 375, height: 812 });
+  check(!(await sp.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "published site has no sideways scroll on a phone");
+  await sp.screenshot({ path: path.join(SHOTS, "shopfront-site-375.png"), fullPage: true });
+  await sp.close();
+  check((await page.textContent("#dl-note")).includes("Downloaded"), "remembers the download");
+  await page.goto(base + "shopfront/#publish", { waitUntil: "networkidle" });
+  check(await page.locator(".host").count() === 3, "publish guide shows three free hosts");
+  await page.fill("[data-pub-web]", "hollowoak.netlify.app");
+  check(await page.evaluate(() => FM.store.profile().website) === "hollowoak.netlify.app", "web address saves to My business");
+  await page.screenshot({ path: path.join(SHOTS, "shopfront-publish-1440.png"), fullPage: true });
+
   console.log("free limit");
   await page.evaluate(() => { for (let i = 0; i < 7; i++) FM.store.put("documents", { type: "invoice", status: "draft", number: "X" + i, lines: [], customer: { name: "T" } }); });
   await page.goto(base + "invoices/#new");
@@ -450,7 +500,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#do-backup")]);
   const file = await dl.path();
   const data = JSON.parse(fs.readFileSync(file, "utf8"));
-  check(data.app === "Fair Measure" && data.documents.length === 10 && data.customers.length === 2 && data.staff.length === 3 && data.shifts.length === 8 && data.cash.length === 3 && data.trips.length === 2, "backup holds everything");
+  check(data.app === "Fair Measure" && data.documents.length === 10 && data.customers.length === 2 && data.staff.length === 3 && data.shifts.length === 8 && data.sites.length === 1 && data.cash.length === 3 && data.trips.length === 2, "backup holds everything");
   await page.screenshot({ path: path.join(SHOTS, "settings-1440.png"), fullPage: true });
   await page.click("#erase");
   await page.click('dialog button[value="yes"]');
@@ -463,7 +513,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
 
   console.log("phone");
   const phone = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-  await phone.addInitScript((d) => { if (!localStorage.getItem("fm.v1.profile")) { localStorage.setItem("fm.v1.profile", JSON.stringify(d.profile)); ["documents", "customers", "items", "costings", "staff", "shifts", "cash", "trips"].forEach((c) => localStorage.setItem("fm.v1." + c, JSON.stringify(d[c] || []))); } }, data);
+  await phone.addInitScript((d) => { if (!localStorage.getItem("fm.v1.profile")) { localStorage.setItem("fm.v1.profile", JSON.stringify(d.profile)); ["documents", "customers", "items", "costings", "staff", "shifts", "sites", "cash", "trips"].forEach((c) => localStorage.setItem("fm.v1." + c, JSON.stringify(d[c] || []))); } }, data);
   const m = await phone.newPage();
   watch(m, "phone");
   await m.goto(base, { waitUntil: "networkidle" });
@@ -517,6 +567,14 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await m.waitForSelector("#me");
   check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in a shared schedule on a phone");
   await m.screenshot({ path: path.join(SHOTS, "shifts-view-375.png"), fullPage: true });
+
+  await m.goto(base + "shopfront/", { waitUntil: "networkidle" });
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone shopfront editor");
+  await m.screenshot({ path: path.join(SHOTS, "shopfront-375.png"), fullPage: true });
+  await m.click('.ed-switch [data-tab="preview"]');
+  await m.waitForTimeout(300);
+  check((await m.frameLocator("#pv").locator("h1").textContent()) === "Hollow Oak Carpentry", "phone preview shows the site");
+  await m.screenshot({ path: path.join(SHOTS, "shopfront-preview-375.png") });
 
   for (const slug of ["about/", "privacy/", "terms/", "refunds/", "thanks/"]) {
     await m.goto(base + slug, { waitUntil: "networkidle" });
