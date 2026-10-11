@@ -578,7 +578,8 @@
     var el = $("#dl-note");
     if (!el || !site) return;
     if (!site.downloadedAt) { el.innerHTML = ""; return; }
-    var changed = (site.updatedAt || "") > site.downloadedAt;
+    // Saving the download time also stamps updatedAt a moment later, so allow a second's slack.
+    var changed = Date.parse(site.updatedAt || 0) - Date.parse(site.downloadedAt) > 1000;
     el.innerHTML = changed
       ? ' · <span class="pill gold">Changed since your last download</span> <a href="#publish">How to update your site</a>'
       : ' · <span class="muted">Downloaded ' + new Date(site.downloadedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + "</span>";
