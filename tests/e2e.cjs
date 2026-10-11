@@ -195,6 +195,80 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await page.locator("dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
   await page.evaluate(() => FM.store.raw.write("cash", FM.store.all("cash").filter((e) => e.date !== "2026-01-02")));
 
+  console.log("customer book");
+  await page.goto(base + "customers/", { waitUntil: "networkidle" });
+  check(await page.locator(".person").count() === 1, "customer book shows the customer from the invoices");
+  await page.click(".person");
+  await page.waitForSelector(".c-title h1");
+  check((await page.textContent(".c-title h1")) === "Margaret Kelly", "customer page opens");
+  check(await page.locator(".ev-doc").count() === 3 && await page.locator(".ev-pay").count() === 1, "history shows three documents and the payment");
+  check((await page.textContent(".money")).includes("2,056.54"), "money card shows what was billed");
+  await page.fill('#fu-add input[name="what"]', "Ask how the shelves are holding up");
+  await page.click('#fu-add [data-days="1"]');
+  await page.click('#fu-add button[type="submit"]');
+  await page.waitForSelector(".fu");
+  check((await page.textContent(".fu .due")).startsWith("Tomorrow"), "reminder added for tomorrow");
+  const [ics] = await Promise.all([page.waitForEvent("download"), page.click('.fu [data-act="fu-ics"]')]);
+  check(fs.readFileSync(await ics.path(), "utf8").includes("BEGIN:VEVENT"), "reminder downloads as a calendar file");
+  await page.fill("#log-text", "Called about a matching cabinet");
+  await page.click('.kind:has(input[value="call"])');
+  await page.click('#log-add button[type="submit"]');
+  await page.waitForSelector(".ev-note");
+  check((await page.textContent(".ev-note .ev-kind")) === "Call", "call note added to the history");
+  await page.fill("#about", "Gate code 4412. Prefers mornings.");
+  await page.waitForFunction(() => document.getElementById("about-saved").textContent === "Saved", null, { timeout: 5000 }).catch(() => {});
+  check(await page.evaluate(() => FM.store.all("customers")[0].notes) === "Gate code 4412. Prefers mornings.", "about notes save as you type");
+  await page.screenshot({ path: path.join(SHOTS, "customer-1440.png"), fullPage: true });
+
+  await page.goto(base + "customers/#", { waitUntil: "networkidle" });
+  await page.waitForSelector(".agenda-row");
+  check(await page.locator(".agenda-row").count() === 1, "reminder shows on the follow-up list");
+  await page.screenshot({ path: path.join(SHOTS, "customers-1440.png"), fullPage: true });
+  await page.click('.agenda-row [data-act="fu-done"]');
+  check(await page.locator(".agenda-row").count() === 0, "done clears it from the list");
+
+  await page.click('.head-actions [data-act="export"]');
+  check(await page.locator("dialog.fm-dialog").isVisible(), "spreadsheet export explains it's Pro");
+  await page.click('dialog button[value="no"]');
+  await page.locator("dialog.fm-dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+
+  await page.click('.head-actions [data-act="add"]');
+  await page.fill('dialog input[name="name"]', "Peg Kelly");
+  await page.fill('dialog input[name="email"]', "margaret@example.com");
+  await page.fill('dialog input[name="tags"]', "Regular, regular, Neighbor");
+  await page.click('dialog button[value="ok"]');
+  await page.waitForSelector(".dup-note");
+  check(await page.evaluate(() => FM.store.all("customers").find((c) => c.name === "Peg Kelly").tags.join("|")) === "Regular|Neighbor", "tags saved without repeats");
+  check(await page.locator(".dup-note").isVisible(), "spots the duplicate by email");
+  await page.click('[data-act="merge-dup"]');
+  await page.click('dialog button[value="yes"]');
+  await page.waitForFunction(() => FM.store.count("customers") === 1, null, { timeout: 5000 }).catch(() => {});
+  check(await page.evaluate(() => FM.store.count("customers")) === 1, "merge leaves one customer");
+  check(await page.evaluate(() => { const c = FM.store.all("customers")[0]; return c.name === "Margaret Kelly" && c.tags.length === 2 && c.log.length === 1; }), "the older record keeps its name and gains the tags");
+  check(await page.evaluate(() => FM.store.all("documents").every((d) => d.customerId === FM.store.all("customers")[0].id)), "documents follow the merged customer");
+
+  await page.goto(base + "customers/#import", { waitUntil: "networkidle" });
+  await page.screenshot({ path: path.join(SHOTS, "import-1440.png"), fullPage: true });
+  await page.setInputFiles("#imp-file", { name: "contacts.vcf", mimeType: "text/vcard", buffer: Buffer.from(
+    "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Margaret Kelly\r\nTEL:(518) 555-0140\r\nEND:VCARD\r\n" +
+    "BEGIN:VCARD\r\nVERSION:3.0\r\nN:Reyes;Tom;;;\r\nORG:Reyes Landscaping\r\nEMAIL:tom@example.com\r\nEND:VCARD\r\n") });
+  await page.waitForSelector(".imp-row");
+  check(await page.locator(".imp-row").count() === 2, "import reads both contacts");
+  const goText = await page.textContent("#imp-go"); check(goText === "Add 1 customer", "the one already in the book isn't ticked (got " + goText + ")");
+  await page.click("#imp-go");
+  await page.waitForSelector(".person");
+  check(await page.evaluate(() => FM.store.count("customers")) === 2, "import adds the new contact");
+
+  const kellyId = await page.evaluate(() => FM.store.all("customers").find((c) => c.name === "Margaret Kelly").id);
+  await page.evaluate((id) => FM.store.put("documents", { type: "invoice", status: "sent", number: "INV-0099", customerId: id, customer: { name: "Margaret Kelly" }, issueDate: "2026-01-05", dueDate: "2026-01-19", lines: [{ qty: 1, price: 12500, taxable: false }], paidAmount: 0, payments: [] }), kellyId);
+  await page.goto(base + "customers/#statement/" + kellyId, { waitUntil: "networkidle" });
+  await page.waitForSelector(".st");
+  check((await page.textContent(".st-grand dd")).includes("125.00") && (await page.textContent(".st-table")).includes("overdue"), "statement lists the overdue invoice");
+  await page.emulateMedia({ media: "print" });
+  await page.screenshot({ path: path.join(SHOTS, "statement-print.png"), fullPage: true });
+  check(!(await page.locator(".c-actions").isVisible()), "statement prints without the buttons");
+  await page.emulateMedia({ media: "screen" });
+  await page.evaluate(() => FM.store.remove("documents", FM.store.all("documents").find((d) => d.number === "INV-0099").id));
   console.log("price builder");
   await page.goto(base + "pricing/", { waitUntil: "networkidle" });
   check(await page.locator(".start").count() === 2, "price builder offers product or service");
@@ -258,7 +332,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#do-backup")]);
   const file = await dl.path();
   const data = JSON.parse(fs.readFileSync(file, "utf8"));
-  check(data.app === "Fair Measure" && data.documents.length === 10 && data.customers.length === 1 && data.cash.length === 3 && data.trips.length === 2, "backup holds everything");
+  check(data.app === "Fair Measure" && data.documents.length === 10 && data.customers.length === 2 && data.cash.length === 3 && data.trips.length === 2, "backup holds everything");
   await page.screenshot({ path: path.join(SHOTS, "settings-1440.png"), fullPage: true });
   await page.click("#erase");
   await page.click('dialog button[value="yes"]');
@@ -296,6 +370,13 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await m.waitForTimeout(200);
   check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone year-end summary");
   await m.screenshot({ path: path.join(SHOTS, "cash-year-375.png"), fullPage: true });
+  await m.goto(base + "customers/", { waitUntil: "networkidle" });
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone customer book");
+  await m.screenshot({ path: path.join(SHOTS, "customers-375.png"), fullPage: true });
+  await m.click(".person >> nth=0");
+  await m.waitForSelector(".c-title h1");
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll on a phone customer page");
+  await m.screenshot({ path: path.join(SHOTS, "customer-375.png"), fullPage: true });
   await m.goto(base + "pricing/", { waitUntil: "networkidle" });
   await m.click(".price-row >> nth=0");
   await m.waitForTimeout(200);
