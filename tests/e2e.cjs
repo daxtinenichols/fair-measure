@@ -326,13 +326,131 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await page.click('dialog button[value="no"]');
   await page.locator("dialog.fm-dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
 
+  console.log("shift planner");
+  await page.goto(base + "shifts/", { waitUntil: "networkidle" });
+  check(await page.locator("#start").isVisible(), "asks who is on the team first");
+  await page.screenshot({ path: path.join(SHOTS, "shifts-start-1440.png"), fullPage: true });
+  await page.fill('#start textarea[name="names"]', "Ana Ruiz\nBen Okafor\nClare Doyle");
+  await page.click('#start button[type="submit"]');
+  await page.waitForSelector(".grid");
+  check(await page.locator(".grid tbody tr").count() === 4, "three people and an open-shifts row");
+  const days = await page.evaluate(() => Array.from(document.querySelectorAll(".grid thead th")).length);
+  check(days === 9, "seven days plus name and hours columns");
+  const ids = await page.evaluate(() => { const s = FM.store.all("staff"); const by = (n) => s.find((p) => p.name.startsWith(n)).id; return { ana: by("Ana"), ben: by("Ben"), clare: by("Clare") }; });
+  const wk = await page.evaluate(() => Array.from(document.querySelectorAll(".cell-add")).slice(0, 7).map((b) => b.getAttribute("data-add").split("|")[0]));
+  async function addShift(pid, day, start, end, extra) {
+    await page.click(`.cell-add[data-add="${wk[day]}|${pid}"]`);
+    await page.fill('dialog input[name="start"]', start);
+    await page.fill('dialog input[name="end"]', end);
+    if (extra) await extra();
+    await page.click('dialog button[value="ok"]');
+    await page.locator("dialog.sp-dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+  }
+  await addShift(ids.ana, 1, "07:00", "15:00", async () => {
+    await page.fill('dialog input[name="breakMin"]', "30");
+    await page.fill('dialog input[name="label"]', "Register");
+    check((await page.textContent("dialog .len")).includes("7.5 hrs"), "dialog shows paid hours");
+    await page.click(`dialog .tog:has(input[value="${wk[2]}"])`);
+    await page.click(`dialog .tog:has(input[value="${wk[3]}"])`);
+  });
+  check(await page.evaluate((id) => FM.store.count("shifts", (s) => s.staffId === id), ids.ana) === 3, "one shift repeated across three days");
+  await addShift(ids.ben, 1, "07:00", "15:00");
+  check((await page.textContent(".tiles .tile:first-child b")).trim() === "30", "30 hours scheduled");
+  check((await page.textContent(".tiles")).includes("Add wages"), "asks for wages before guessing a cost");
+  await addShift(ids.ana, 1, "14:00", "22:00");
+  check(await page.locator(".shift.has-warn").count() >= 2, "double booking is flagged");
+  check((await page.textContent("#warnings")).includes("already working"), "warning says why");
+  await page.screenshot({ path: path.join(SHOTS, "shifts-1440.png"), fullPage: true });
+  const late = await page.evaluate((id) => FM.store.all("shifts").find((s) => s.staffId === id && s.start === "14:00").id, ids.ana);
+  await page.click(`.grid .shift[data-shift="${late}"]`);
+  await page.click('dialog [data-act="delete"]');
+  await page.waitForTimeout(200);
+  check(await page.locator(".shift.has-warn").count() === 0, "deleting the clash clears the warning");
+
+  await page.goto(base + "shifts/#team");
+  await page.click(`a.person[href="#p/${ids.ana}"]`);
+  await page.fill('#pf input[name="phone"]', "(518) 555-0111");
+  await page.fill('#pf input[name="wage"]', "18");
+  await page.click('#pf button[type="submit"]');
+  await page.goto(base + "shifts/#p/" + ids.ben);
+  await page.waitForSelector("#pf");
+  await page.fill('#pf input[name="wage"]', "20");
+  await page.click('#pf .tog:has(input[value="6"])');
+  await page.click('#pf button[type="submit"]');
+  await page.waitForTimeout(150);
+  check(await page.evaluate((id) => FM.store.get("staff", id).wage, ids.ana) === 1800, "hourly pay saved in cents");
+  await page.screenshot({ path: path.join(SHOTS, "shifts-person-1440.png"), fullPage: true });
+  await page.goto(base + "shifts/");
+  await page.waitForSelector(".grid");
+  check((await page.textContent(".tiles")).includes("$555.00"), "week's wages are $555.00");
+
+  const benShift = await page.evaluate((id) => FM.store.all("shifts").find((s) => s.staffId === id).id, ids.ben);
+  await page.click(`.grid .shift[data-shift="${benShift}"]`);
+  await page.click('dialog [data-act="cover"]');
+  check((await page.textContent("dialog .cover-list li:first-child")).includes("Clare"), "the free person is offered first");
+  await page.screenshot({ path: path.join(SHOTS, "shifts-cover-1440.png") });
+  await page.click(`dialog [data-give="${ids.clare}"]`);
+  await page.waitForTimeout(200);
+  check(await page.evaluate((id) => FM.store.get("shifts", id).staffId, benShift) === ids.clare, "cover hands the shift over");
+
+  await page.click('[data-act="share"]');
+  const shareUrl = await page.inputValue("#share-url");
+  check(shareUrl.includes("/fair-measure/shifts/#view/"), "share link points at the planner");
+  const packed = Buffer.from(shareUrl.split("#view/")[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+  check(packed.includes("Ana Ruiz") && !packed.includes("555-0111") && !packed.includes("1800"), "link carries names, not phone numbers or pay");
+  check(await page.locator('dialog .share-list a[href^="sms:"]').count() === 1, "text button for the person with a phone number");
+  await page.screenshot({ path: path.join(SHOTS, "shifts-share-1440.png") });
+  await page.click('dialog button[value="done"]');
+  await page.locator("dialog.sp-dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+  check((await page.textContent(".week-tools")).includes("Shared"), "week shows it was shared");
+
+  await page.goto(shareUrl);
+  await page.waitForSelector("#me");
+  await page.selectOption("#me", ids.ana);
+  await page.waitForSelector(".v-mine");
+  check((await page.textContent(".v-mine")).includes("Your shifts: 3"), "team member sees their own shifts");
+  const [shiftIcs] = await Promise.all([page.waitForEvent("download"), page.click('.v-mine [data-act="ics"]')]);
+  check(shiftIcs.suggestedFilename().endsWith(".ics") && fs.readFileSync(await shiftIcs.path(), "utf8").includes("BEGIN:VEVENT"), "calendar file downloads");
+  await page.screenshot({ path: path.join(SHOTS, "shifts-view-1440.png"), fullPage: true });
+  await page.click(".v-day li.me [data-ask] >> nth=0");
+  await page.selectOption('dialog select[name="b"]', { index: 0 });
+  await page.fill('dialog input[name="msg"]', "Doctor's appointment");
+  await page.click('dialog button[value="ok"]');
+  await page.waitForSelector("#req-text");
+  const reqText = await page.inputValue("#req-text");
+  check(reqText.includes("Could I trade my") && await page.locator('dialog a[href^="sms:"]').count() === 1, "request is written for the owner to receive");
+  const askUrl = reqText.match(/https?:\S+#ask\/\S+/)[0];
+  await page.click('dialog button[value="done"]');
+
+  await page.goto(askUrl);
+  await page.waitForSelector(".ask-card");
+  check((await page.textContent(".ask-card h2")).includes("Ana Ruiz would like to trade shifts with Clare Doyle"), "owner sees the request plainly");
+  await page.screenshot({ path: path.join(SHOTS, "shifts-ask-1440.png"), fullPage: true });
+  await page.click('.ask-card [data-act="yes"]');
+  await page.waitForSelector(".grid");
+  check(await page.evaluate((a) => FM.store.count("shifts", (s) => s.staffId === a.clare) === 1 && FM.store.count("shifts", (s) => s.staffId === a.ana) === 3, ids), "approving swaps the shifts");
+  check((await page.textContent(".week-tools")).includes("Changed since you shared it"), "reminds the owner to share again");
+
+  await page.click('[data-act="next"]');
+  await page.click('[data-act="copy-last"]');
+  await page.click('dialog button[value="yes"]');
+  await page.waitForTimeout(200);
+  check(await page.locator(".grid .shift").count() === 4, "copy last week brings all four shifts");
+  await page.evaluate(() => { for (let i = 0; i < 2; i++) FM.store.put("staff", { name: "Extra " + i }); });
+  await page.goto(base + "shifts/#team");
+  await page.fill('#add input[name="name"]', "Sixth Person");
+  await page.click('#add button[type="submit"]');
+  check(await page.locator("dialog.fm-dialog").isVisible(), "limit dialog at 5 people");
+  await page.click('dialog button[value="no"]');
+  await page.evaluate(() => FM.store.all("staff").filter((p) => p.name.startsWith("Extra")).forEach((p) => FM.store.remove("staff", p.id)));
+
   console.log("settings and backup");
   await page.goto(base + "settings/", { waitUntil: "networkidle" });
   check((await page.inputValue('input[name="name"]')) === "Hollow Oak Carpentry", "settings show shared profile");
   const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#do-backup")]);
   const file = await dl.path();
   const data = JSON.parse(fs.readFileSync(file, "utf8"));
-  check(data.app === "Fair Measure" && data.documents.length === 10 && data.customers.length === 2 && data.cash.length === 3 && data.trips.length === 2, "backup holds everything");
+  check(data.app === "Fair Measure" && data.documents.length === 10 && data.customers.length === 2 && data.staff.length === 3 && data.shifts.length === 8 && data.cash.length === 3 && data.trips.length === 2, "backup holds everything");
   await page.screenshot({ path: path.join(SHOTS, "settings-1440.png"), fullPage: true });
   await page.click("#erase");
   await page.click('dialog button[value="yes"]');
@@ -345,7 +463,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
 
   console.log("phone");
   const phone = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-  await phone.addInitScript((d) => { if (!localStorage.getItem("fm.v1.profile")) { localStorage.setItem("fm.v1.profile", JSON.stringify(d.profile)); ["documents", "customers", "items", "costings", "cash", "trips"].forEach((c) => localStorage.setItem("fm.v1." + c, JSON.stringify(d[c] || []))); } }, data);
+  await phone.addInitScript((d) => { if (!localStorage.getItem("fm.v1.profile")) { localStorage.setItem("fm.v1.profile", JSON.stringify(d.profile)); ["documents", "customers", "items", "costings", "staff", "shifts", "cash", "trips"].forEach((c) => localStorage.setItem("fm.v1." + c, JSON.stringify(d[c] || []))); } }, data);
   const m = await phone.newPage();
   watch(m, "phone");
   await m.goto(base, { waitUntil: "networkidle" });
@@ -384,6 +502,21 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone price builder");
   await m.screenshot({ path: path.join(SHOTS, "pricing-375.png"), fullPage: true });
   await m.screenshot({ path: path.join(SHOTS, "pricing-375-fold.png") });
+
+  await m.goto(base + "shifts/", { waitUntil: "networkidle" });
+  check(await m.locator(".day-strip .day-btn").count() === 7, "phone plans one day at a time");
+  await m.click(".day-strip .day-btn >> nth=1");
+  check(await m.locator(".day-list .day-row").count() === 2, "phone day shows its shifts");
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone shift planner");
+  await m.screenshot({ path: path.join(SHOTS, "shifts-375.png"), fullPage: true });
+  await m.click(".day-list .shift >> nth=0");
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone shift dialog");
+  await m.screenshot({ path: path.join(SHOTS, "shifts-dialog-375.png") });
+  await m.click('dialog button[value="cancel"]');
+  await m.goto(shareUrl.replace(/^http:\/\/[^/]+\/fair-measure\//, base));
+  await m.waitForSelector("#me");
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in a shared schedule on a phone");
+  await m.screenshot({ path: path.join(SHOTS, "shifts-view-375.png"), fullPage: true });
 
   for (const slug of ["about/", "privacy/", "terms/", "refunds/", "thanks/"]) {
     await m.goto(base + slug, { waitUntil: "networkidle" });
