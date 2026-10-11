@@ -16,7 +16,7 @@
       blurb: "Cost out a product or a job, pay yourself a fair wage, and see the price that keeps your doors open." },
     { id: "customers", name: "Customer Book", path: "customers/", status: "live",
       blurb: "Every customer, note and follow-up in one quiet place, filled in automatically from your quotes and invoices." },
-    { id: "cash", name: "Cash Book", path: "", status: "soon",
+    { id: "cash", name: "Cash Book", path: "cash/", status: "live",
       blurb: "Money in, money out, miles driven, and how much to set aside for quarterly taxes." },
     { id: "shifts", name: "Shift Planner", path: "shifts/", status: "live",
       blurb: "A simple staff schedule with swaps and sick-day cover, without per-person fees." },
