@@ -16,7 +16,7 @@
     recheckDays: 30
   };
 
-  var LIMITS = { customers: 5, documents: 10, items: 15, costings: 10, staff: 5, cash: 30, trips: 30 };
+  var LIMITS = { customers: 5, documents: 10, items: 15, costings: 10, staff: 5, cash: 30, trips: 30, time: 30 };
   var KEY = "license";
 
   function saved() { return FM.store.raw.read(KEY, null); }

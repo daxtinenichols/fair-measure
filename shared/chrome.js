@@ -21,7 +21,9 @@
     { id: "shifts", name: "Shift Planner", path: "shifts/", status: "live",
       blurb: "A simple staff schedule with swaps and sick-day cover, without per-person fees." },
     { id: "shopfront", name: "Shopfront Studio", path: "shopfront/", status: "live",
-      blurb: "A warm, simple website for your business, built from the details you've already entered." }
+      blurb: "A warm, simple website for your business, built from the details you've already entered." },
+    { id: "time", name: "Time Book", path: "time/", status: "live",
+      blurb: "Start the clock, log your hours by customer and job, and turn them into an invoice in one step." }
   ];
 
   FM.esc = function (s) {

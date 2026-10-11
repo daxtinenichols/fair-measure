@@ -13,6 +13,7 @@ Honest, private, pay-once tools for small businesses. Live at https://daxtinenic
 | `shifts/` | Shift Planner: weekly staff schedule, shared by link (the week travels inside the link), with swap and cover requests the owner approves |
 | `shopfront/` | Shopfront Studio: builds a one-page business website from the shared profile and items, downloaded as one self-contained `index.html` |
 | `cash/` | Cash Book: money in and out, mileage log, quarterly tax set-aside, year-end Schedule C summary |
+| `time/` | Time Book: a running clock and hand-entered hours by customer and job, turned into a draft invoice in one step, with fair rounding and printable timesheets |
 | `settings/` | My business: shared business details, Pro license, backup and restore |
 | `about/`, `privacy/`, `terms/`, `refunds/` | About and legal pages |
 | `shared/` | Code and styles every tool uses |
@@ -20,7 +21,7 @@ Honest, private, pay-once tools for small businesses. Live at https://daxtinenic
 ### Shared pieces (every tool loads these)
 
 - `shared/chrome.js`: header, footer, the one list of tools (`FM.tools`), toast and confirm dialog. Builds links from the site root, so the site works under `/fair-measure/` and on a custom domain.
-- `shared/store.js`: the business book. One store in the browser's localStorage (keys `fm.v1.*`) holding the business profile, `customers`, `items`, `documents`, `costings` (Price Builder), `staff` and `shifts` (Shift Planner), `sites` (Shopfront Studio), and `cash` entries and `trips` (Cash Book). Tools share records through it, and one backup file holds everything. Money is whole cents.
+- `shared/store.js`: the business book. One store in the browser's localStorage (keys `fm.v1.*`) holding the business profile, `customers`, `items`, `documents`, `costings` (Price Builder), `staff` and `shifts` (Shift Planner), `sites` (Shopfront Studio), `cash` entries and `trips` (Cash Book), and `time` (Time Book entries; the running clock is the separate key `fm.v1.timer`). Tools share records through it, and one backup file holds everything. Money is whole cents.
 - `shared/license.js`: Pro unlock. Set `checkoutUrl` and `organizationId` once the store exists; until then Pro shows "coming soon". Free limits live here too.
 - `shared/fm.css`, `shared/fonts/`: design tokens and self-hosted fonts (Fraunces and Source Sans 3, SIL Open Font License).
 
@@ -44,6 +45,7 @@ node tests/customers.test.js   # Customer Book logic
 node tests/shifts.test.js      # Shift Planner logic
 node tests/shopfront.test.js   # Shopfront Studio site builder
 node tests/cash.test.js        # Cash Book arithmetic
+node tests/time.test.js        # Time Book arithmetic
 node tests/e2e.cjs             # browser test with Playwright (npm install first), screenshots in tests/shots/
 ```
 
