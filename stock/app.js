@@ -693,11 +693,10 @@
       var got = rows().filter(function (x) { return x.q > 0; });
       if (!got.length) { FM.toast("Nothing recorded"); return; }
       var date = f.date.value, total = 0, stamp = new Date().toISOString();
-      var stock = S.all("stock"), moves = S.all("stockMoves");
+      var moves = S.all("stockMoves");
       got.forEach(function (x) {
         total += Math.round(x.q * x.c);
         moves.push({ id: S.uid(), stockId: x.l.id, date: date, kind: "in", qty: x.q, unitCost: x.c, note: g.supplier ? "From " + g.supplier : "", createdAt: stamp, updatedAt: stamp });
-        stock.forEach(function (s) { if (s.id === x.l.id && x.c) { s.unitCost = x.c; s.updatedAt = stamp; } });
       });
       var cashId = "";
       if (f.cash.checked && total > 0) {
@@ -710,7 +709,12 @@
       // One Cash Book entry covers the order; it hangs off the first line so deleting that
       // line offers to remove it.
       if (cashId) moves[moves.length - got.length].cashId = cashId;
-      try { S.raw.write("stockMoves", moves); S.raw.write("stock", stock); } catch (err) { FM.toast(err.message); return; }
+      try { S.raw.write("stockMoves", moves); } catch (err) { FM.toast(err.message); return; }
+      // The latest price paid becomes the cost each; only records whose price changed are rewritten.
+      got.forEach(function (x) {
+        var s = S.get("stock", x.l.id);
+        if (s && x.c && s.unitCost !== x.c) put("stock", Object.assign({}, s, { unitCost: x.c }));
+      });
       FM.toast("Added " + got.length + " to stock" + (cashId ? " and " + fmt(total) + " to Cash Book" : ""));
       route();
     });

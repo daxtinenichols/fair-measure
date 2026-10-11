@@ -504,7 +504,8 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await page.click('.order [data-act="received"]');
   await page.click('dialog button[value="ok"]');
   await page.waitForSelector(".empty-card");
-  check(await page.evaluate(() => { const f = FM.store.all("stock").find((s) => s.name === "Bread flour"); return FM.store.all("stockMoves").filter((m) => m.stockId === f.id && m.kind === "in" && m.qty === 50).length === 1; }), "the arrived order goes into stock");
+  const arrived = await page.evaluate(() => { const f = FM.store.all("stock").find((s) => s.name === "Bread flour"); return f ? FM.store.all("stockMoves").filter((m) => m.stockId === f.id && m.kind === "in" && m.qty === 50).length : JSON.stringify(FM.store.all("stock").map((s) => s.name)); });
+  check(arrived === 1, "the arrived order goes into stock (got " + arrived + ")");
   check(await page.evaluate((n) => { const c = FM.store.all("cash"); const e = c[c.length - 1]; return c.length === n + 1 && e.amount === 4500 && e.category === "supplies" && e.party === "Mill Creek"; }, cashBefore), "and what was paid lands in Cash Book as supplies");
 
   const today = await page.evaluate(() => FMStock.localDate(new Date()));
