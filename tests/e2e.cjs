@@ -40,7 +40,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
 
   console.log("home");
   await page.goto(base, { waitUntil: "networkidle" });
-  check(await page.locator(".tool").count() === 7, "seven tool cards");
+  check(await page.locator(".tool").count() === 8, "eight tool cards");
   check(await page.locator("#fm-top .fm-brand").isVisible(), "header renders");
   check((await page.getAttribute("#buy-pro", "href")).startsWith("https://buy.polar.sh/"), "Get Pro links to the Polar checkout");
   const fontOk = await page.evaluate(() => document.fonts.check("600 20px Fraunces"));
@@ -461,6 +461,93 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await page.click('dialog button[value="no"]');
   await page.evaluate(() => FM.store.all("time").filter((e) => e.job === "Extra").forEach((e) => FM.store.remove("time", e.id)));
 
+  console.log("stock book");
+  await page.goto(base + "stock/", { waitUntil: "networkidle" });
+  check(await page.locator("#from-items").isVisible(), "first visit offers the saved items");
+  check((await page.textContent("#from-items")).includes("Sourdough loaf"), "lists the loaf from Price Builder");
+  await page.screenshot({ path: path.join(SHOTS, "stock-start-1440.png"), fullPage: true });
+  const loafItem = await page.evaluate(() => FM.store.all("items").find((i) => i.name === "Sourdough loaf").id);
+  check(await page.locator('#from-items input[name="pick"]:checked').count() === 1, "only the costed product starts ticked");
+  await page.fill('#from-items input[name="n-' + loafItem + '"]', "12");
+  await page.click('#from-items button[type="submit"]');
+  await page.waitForSelector(".thing");
+  check(await page.locator(".thing").count() === 1, "tracks the one ticked item");
+  check((await page.textContent(".thing .t-qty b")) === "12", "with its starting count");
+  check(await page.evaluate(() => { const s = FM.store.all("stock")[0]; return s.unitCost === 633 && s.unit === "loaf" && !!s.itemId; }), "carries the cost from Price Builder and links the item");
+
+  await page.click('.list-bar [data-act="add"]');
+  await page.check('dialog input[name="kind"][value="supply"]');
+  await page.fill('dialog input[name="name"]', "Bread flour");
+  await page.fill('dialog input[name="unit"]', "lb");
+  await page.fill('dialog input[name="unitCost"]', "0.90");
+  await page.fill('dialog input[name="reorderAt"]', "20");
+  await page.fill('dialog input[name="reorderQty"]', "50");
+  await page.fill('dialog input[name="supplier"]', "Mill Creek");
+  await page.fill('dialog input[name="start"]', "25");
+  await page.press('dialog input[name="start"]', "Enter");
+  await page.waitForSelector(".hero");
+  check((await page.textContent(".big-qty b")) === "25", "Enter saves a new supply and opens it");
+  await page.click('.acts [data-kind="used"]');
+  await page.fill('dialog input[name="qty"]', "8");
+  check((await page.textContent("#after")).includes("Leaves 17"), "shows what the change leaves");
+  await page.click('dialog button[value="ok"]');
+  await page.waitForFunction(() => document.querySelector(".big-qty b").textContent === "17", null, { timeout: 5000 }).catch(() => {});
+  check((await page.textContent(".big-qty")).includes("Low"), "17 lb is under the reorder level");
+  await page.screenshot({ path: path.join(SHOTS, "stock-thing-1440.png"), fullPage: true });
+
+  await page.goto(base + "stock/#reorder", { waitUntil: "networkidle" });
+  check((await page.textContent(".seg .badge")) === "1", "reorder tab counts what's low");
+  check((await page.textContent(".order h3")) === "Mill Creek", "reorder list grouped by supplier");
+  check((await page.textContent(".order .re-table")).includes("50 lb"), "suggests the usual order");
+  await page.screenshot({ path: path.join(SHOTS, "stock-reorder-1440.png"), fullPage: true });
+  const cashBefore = await page.evaluate(() => FM.store.count("cash"));
+  await page.click('.order [data-act="received"]');
+  await page.click('dialog button[value="ok"]');
+  await page.waitForSelector(".empty-card");
+  const arrived = await page.evaluate(() => { const f = FM.store.all("stock").find((s) => s.name === "Bread flour"); return f ? FM.store.all("stockMoves").filter((m) => m.stockId === f.id && m.kind === "in" && m.qty === 50).length : JSON.stringify(FM.store.all("stock").map((s) => s.name)); });
+  check(arrived === 1, "the arrived order goes into stock (got " + arrived + ")");
+  check(await page.evaluate((n) => { const c = FM.store.all("cash"); const e = c[c.length - 1]; return c.length === n + 1 && e.amount === 4500 && e.category === "supplies" && e.party === "Mill Creek"; }, cashBefore), "and what was paid lands in Cash Book as supplies");
+
+  const today = await page.evaluate(() => FMStock.localDate(new Date()));
+  const saleId = await page.evaluate((d) => FM.store.put("documents", { type: "invoice", status: "sent", number: "INV-0500", issueDate: d, customer: { name: "Rosa Diaz" }, lines: [{ description: "Sourdough loaf", qty: 3, price: 875 }], payments: [], paidAmount: 0 }).id, today);
+  await page.goto(base + "stock/", { waitUntil: "networkidle" });
+  check((await page.textContent('.thing:has-text("Sourdough loaf") .t-qty b')) === "9", "a sent invoice takes sold loaves out of stock");
+  await page.click('.thing:has-text("Sourdough loaf") .t-main');
+  await page.waitForSelector(".hist");
+  check((await page.textContent(".hist")).includes("Invoice INV-0500"), "history links the invoice");
+  await page.evaluate((id) => FM.store.remove("documents", id), saleId);
+  await page.goto(base + "stock/", { waitUntil: "networkidle" });
+  check((await page.textContent('.thing:has-text("Sourdough loaf") .t-qty b')) === "12", "deleting the invoice puts the stock back");
+  await page.click('.thing:has-text("Sourdough loaf") [data-act="one-out"]');
+  await page.waitForFunction(() => document.querySelector('.thing .t-qty b').textContent === "11", null, { timeout: 5000 }).catch(() => {});
+  check((await page.textContent('.thing:has-text("Sourdough loaf") .t-qty b')) === "11", "one tap records one sold");
+  await page.screenshot({ path: path.join(SHOTS, "stock-1440.png"), fullPage: true });
+
+  await page.goto(base + "stock/#count", { waitUntil: "networkidle" });
+  const loafStock = await page.evaluate(() => FM.store.all("stock").find((s) => s.name === "Sourdough loaf").id);
+  await page.fill("#c-" + loafStock, "10");
+  check((await page.textContent("#count-sum")).includes("1 counted, 1 different"), "stock take shows differences as you type");
+  await page.screenshot({ path: path.join(SHOTS, "stock-count-1440.png"), fullPage: true });
+  await page.click('#count-form button[type="submit"]');
+  await page.waitForSelector(".thing");
+  check((await page.textContent('.thing:has-text("Sourdough loaf") .t-qty b')) === "10", "the count corrects the book");
+
+  await page.goto(base + "stock/#value", { waitUntil: "networkidle" });
+  check((await page.textContent(".val-total b")) === "$123.60", "value at cost: 10 loaves at $6.33 plus 67 lb at $0.90");
+  await page.screenshot({ path: path.join(SHOTS, "stock-value-1440.png"), fullPage: true });
+  await page.click('.val-bar [data-act="as-of"]:nth-child(2)');
+  check((await page.textContent(".val-total b")) === "$0.00", "nothing in stock at the end of last year");
+  await page.click('.val-bar [data-act="csv"]');
+  check((await page.textContent("dialog h3")).includes("Pro"), "spreadsheet export is a Pro feature");
+  await page.click('dialog button[value="no"]');
+
+  await page.evaluate(() => { for (let i = 0; i < 13; i++) FM.store.put("stock", { name: "Extra " + i, kind: "sell", unitCost: 0, reorderAt: "" }); });
+  await page.goto(base + "stock/", { waitUntil: "networkidle" });
+  await page.click('.list-bar [data-act="add"]');
+  check((await page.textContent("dialog h3")).includes("free limit"), "limit dialog at 15 stocked things");
+  await page.click('dialog button[value="no"]');
+  await page.evaluate(() => FM.store.all("stock").filter((s) => s.name.startsWith("Extra ")).forEach((s) => FM.store.remove("stock", s.id)));
+
   console.log("free limit");
   await page.evaluate(() => { for (let i = 0; i < 6; i++) FM.store.put("documents", { type: "invoice", status: "draft", number: "X" + i, lines: [], customer: { name: "T" } }); });
   await page.goto(base + "invoices/#new");
@@ -593,7 +680,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#do-backup")]);
   const file = await dl.path();
   const data = JSON.parse(fs.readFileSync(file, "utf8"));
-  check(data.app === "Fair Measure" && data.documents.length === 10 && data.customers.length === 2 && data.staff.length === 3 && data.shifts.length === 8 && data.sites.length === 1 && data.cash.length === 3 && data.trips.length === 2 && data.time.length === 3, "backup holds everything");
+  check(data.app === "Fair Measure" && data.documents.length === 10 && data.customers.length === 2 && data.staff.length === 3 && data.shifts.length === 8 && data.sites.length === 1 && data.cash.length === 4 && data.trips.length === 2 && data.time.length === 3 && data.stock.length === 2 && data.stockMoves.length === 6, "backup holds everything");
   await page.screenshot({ path: path.join(SHOTS, "settings-1440.png"), fullPage: true });
   await page.click("#erase");
   await page.click('dialog button[value="yes"]');
@@ -606,7 +693,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
 
   console.log("phone");
   const phone = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-  await phone.addInitScript((d) => { if (!localStorage.getItem("fm.v1.profile")) { localStorage.setItem("fm.v1.profile", JSON.stringify(d.profile)); ["documents", "customers", "items", "costings", "staff", "shifts", "sites", "cash", "trips", "time"].forEach((c) => localStorage.setItem("fm.v1." + c, JSON.stringify(d[c] || []))); } }, data);
+  await phone.addInitScript((d) => { if (!localStorage.getItem("fm.v1.profile")) { localStorage.setItem("fm.v1.profile", JSON.stringify(d.profile)); ["documents", "customers", "items", "costings", "staff", "shifts", "sites", "cash", "trips", "time", "stock", "stockMoves"].forEach((c) => localStorage.setItem("fm.v1." + c, JSON.stringify(d[c] || []))); } }, data);
   const m = await phone.newPage();
   watch(m, "phone");
   await m.goto(base, { waitUntil: "networkidle" });
@@ -685,6 +772,23 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await m.goto(base + "time/#sheet", { waitUntil: "networkidle" });
   check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll on a phone timesheet");
   await m.screenshot({ path: path.join(SHOTS, "time-sheet-375.png"), fullPage: true });
+
+  await m.goto(base + "stock/", { waitUntil: "networkidle" });
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone stock book");
+  await m.screenshot({ path: path.join(SHOTS, "stock-375.png"), fullPage: true });
+  await m.click('.thing:has-text("Bread flour") .t-main');
+  await m.waitForSelector(".hero");
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll on a phone stock item");
+  await m.screenshot({ path: path.join(SHOTS, "stock-thing-375.png"), fullPage: true });
+  await m.click('.acts [data-kind="in"]');
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone stock dialog");
+  await m.screenshot({ path: path.join(SHOTS, "stock-dialog-375.png") });
+  await m.click('dialog [data-close="cancel"]');
+  for (const r of ["count", "reorder", "value"]) {
+    await m.goto(base + "stock/#" + r, { waitUntil: "networkidle" });
+    check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll on the phone stock " + r + " page");
+    await m.screenshot({ path: path.join(SHOTS, "stock-" + r + "-375.png"), fullPage: true });
+  }
 
   for (const slug of ["about/", "privacy/", "terms/", "refunds/", "thanks/"]) {
     await m.goto(base + slug, { waitUntil: "networkidle" });

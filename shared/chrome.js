@@ -23,7 +23,9 @@
     { id: "shopfront", name: "Shopfront Studio", path: "shopfront/", status: "live",
       blurb: "A warm, simple website for your business, built from the details you've already entered." },
     { id: "time", name: "Time Book", path: "time/", status: "live",
-      blurb: "Start the clock, log your hours by customer and job, and turn them into an invoice in one step." }
+      blurb: "Start the clock, log your hours by customer and job, and turn them into an invoice in one step." },
+    { id: "stock", name: "Stock Book", path: "stock/", status: "live",
+      blurb: "Know what's on the shelf, see what's running low, and know what your stock is worth at year end." }
   ];
 
   FM.esc = function (s) {
