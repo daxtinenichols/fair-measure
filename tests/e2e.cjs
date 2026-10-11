@@ -118,6 +118,83 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await page.waitForTimeout(200);
   check(await page.locator(".item-row").count() === 1, "one saved item");
 
+  console.log("cash book");
+  await page.goto(base + "cash/", { waitUntil: "networkidle" });
+  const fromInvoice = await page.textContent(".tile >> nth=0");
+  check(fromInvoice.includes("2,056.54"), "invoice payment shows as money in (got " + fromInvoice.trim() + ")");
+  await page.click('[data-act="add-out"]');
+  await page.fill('dialog input[name="amount"]', "120.50");
+  await page.fill('dialog input[name="party"]', "Saratoga Lumber");
+  await page.selectOption('dialog select[name="category"]', "supplies");
+  await page.click('dialog button[value="ok"]');
+  await page.locator("dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+  await page.click('[data-act="add-out"]');
+  await page.fill('dialog input[name="amount"]', "30");
+  await page.fill('dialog input[name="party"]', "Saratoga Lumber");
+  await page.dispatchEvent('dialog input[name="party"]', "change");
+  check((await page.inputValue('dialog select[name="category"]')) === "supplies", "a known payee fills in its category");
+  await page.screenshot({ path: path.join(SHOTS, "cash-entry-1440.png") });
+  await page.click('dialog button[value="ok"]');
+  await page.locator("dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+  check(await page.evaluate(() => FM.store.count("cash")) === 2, "two expenses saved");
+
+  await page.click('[data-act="add-trip"]');
+  await page.fill('dialog input[name="purpose"]', "Measure the Kelly kitchen");
+  await page.fill('dialog input[name="to"]', "Ballston Spa");
+  await page.fill('dialog input[name="miles"]', "12.5");
+  check((await page.textContent("dialog .trip-calc")).includes("25 miles"), "round trip counts the miles twice");
+  await page.click('dialog button[value="ok"]');
+  await page.locator("dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+  await page.goto(base + "cash/#miles");
+  await page.waitForTimeout(200);
+  await page.click(".usual .chip >> nth=0");
+  await page.waitForTimeout(200);
+  check(await page.locator(".row.trip").count() === 2, "a usual trip logs again in one tap");
+  await page.screenshot({ path: path.join(SHOTS, "cash-miles-1440.png"), fullPage: true });
+
+  await page.goto(base + "cash/");
+  await page.waitForTimeout(200);
+  const expected = await page.evaluate(() => FM.money.format(205654 - 15050 - FMCash.totals([], FM.store.all("trips"), "0000", "9999").mileage));
+  check((await page.textContent(".tile >> nth=2")).includes(expected), "profit is money in less costs and mileage (" + expected + ")");
+  await page.screenshot({ path: path.join(SHOTS, "cash-overview-1440.png"), fullPage: true });
+  await page.hover(".col >> nth=" + (new Date().getMonth()));
+  check(await page.locator(".chart .tip").isVisible(), "chart shows a readout on hover");
+  await page.click('.q.is-next [data-act="pay-q"]');
+  check(parseFloat(await page.inputValue('dialog input[name="amount"]')) > 0, "tax payment starts at the suggested set-aside");
+  await page.click('dialog button[value="ok"]');
+  await page.locator("dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(200);
+  check(await page.locator(".q.is-next .pill.green").count() === 1, "period shows as paid after recording the payment");
+
+  await page.goto(base + "cash/#money");
+  await page.waitForTimeout(200);
+  check(await page.locator(".rows .row").count() === 4, "money list has the invoice payment, two expenses and the tax payment");
+  await page.click('[data-filter="invoices"]');
+  check((await page.getAttribute(".rows .row >> nth=0", "href")).includes("invoices/#doc/"), "invoice payment links back to its invoice");
+  await page.click('[data-act="csv"]');
+  check(await page.locator("dialog.fm-dialog").isVisible(), "CSV export explains it's part of Pro");
+  await page.click('dialog button[value="no"]');
+  await page.locator("dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+
+  await page.goto(base + "cash/#year");
+  await page.waitForTimeout(200);
+  const net = await page.textContent(".sched tr.grand td");
+  check(net.includes(expected), "year-end net profit matches the overview (got " + net + ")");
+  await page.screenshot({ path: path.join(SHOTS, "cash-year-1440.png"), fullPage: true });
+  await page.emulateMedia({ media: "print" });
+  await page.screenshot({ path: path.join(SHOTS, "cash-year-print.png"), fullPage: true });
+  check(!(await page.locator(".app-head").isVisible()), "print shows only the summary");
+  await page.emulateMedia({ media: "screen" });
+
+  await page.evaluate(() => { for (let i = 0; i < 27; i++) FM.store.put("cash", { kind: "out", category: "supplies", date: "2026-01-02", amount: 100 }); });
+  await page.goto(base + "cash/");
+  await page.waitForTimeout(200);
+  await page.click('[data-act="add-out"]');
+  check((await page.textContent("dialog.fm-dialog h3")) === "You've reached the free limit", "free limit at 30 entries");
+  await page.click('dialog button[value="no"]');
+  await page.locator("dialog").waitFor({ state: "detached", timeout: 5000 }).catch(() => {});
+  await page.evaluate(() => FM.store.raw.write("cash", FM.store.all("cash").filter((e) => e.date !== "2026-01-02")));
+
   console.log("customer book");
   await page.goto(base + "customers/", { waitUntil: "networkidle" });
   check(await page.locator(".person").count() === 1, "customer book shows the customer from the invoices");
@@ -516,7 +593,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#do-backup")]);
   const file = await dl.path();
   const data = JSON.parse(fs.readFileSync(file, "utf8"));
-  check(data.app === "Fair Measure" && data.documents.length === 10 && data.customers.length === 2 && data.staff.length === 3 && data.shifts.length === 8 && data.sites.length === 1 && data.time.length === 3, "backup holds everything");
+  check(data.app === "Fair Measure" && data.documents.length === 10 && data.customers.length === 2 && data.staff.length === 3 && data.shifts.length === 8 && data.sites.length === 1 && data.cash.length === 3 && data.trips.length === 2 && data.time.length === 3, "backup holds everything");
   await page.screenshot({ path: path.join(SHOTS, "settings-1440.png"), fullPage: true });
   await page.click("#erase");
   await page.click('dialog button[value="yes"]');
@@ -529,7 +606,7 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
 
   console.log("phone");
   const phone = await browser.newContext({ viewport: { width: 375, height: 812 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
-  await phone.addInitScript((d) => { if (!localStorage.getItem("fm.v1.profile")) { localStorage.setItem("fm.v1.profile", JSON.stringify(d.profile)); localStorage.setItem("fm.v1.documents", JSON.stringify(d.documents)); localStorage.setItem("fm.v1.customers", JSON.stringify(d.customers)); localStorage.setItem("fm.v1.items", JSON.stringify(d.items)); localStorage.setItem("fm.v1.costings", JSON.stringify(d.costings)); localStorage.setItem("fm.v1.staff", JSON.stringify(d.staff)); localStorage.setItem("fm.v1.shifts", JSON.stringify(d.shifts)); localStorage.setItem("fm.v1.sites", JSON.stringify(d.sites)); localStorage.setItem("fm.v1.time", JSON.stringify(d.time)); } }, data);
+  await phone.addInitScript((d) => { if (!localStorage.getItem("fm.v1.profile")) { localStorage.setItem("fm.v1.profile", JSON.stringify(d.profile)); ["documents", "customers", "items", "costings", "staff", "shifts", "sites", "cash", "trips", "time"].forEach((c) => localStorage.setItem("fm.v1." + c, JSON.stringify(d[c] || []))); } }, data);
   const m = await phone.newPage();
   watch(m, "phone");
   await m.goto(base, { waitUntil: "networkidle" });
@@ -547,6 +624,13 @@ function check(cond, msg) { if (!cond) { problems.push("FAILED: " + msg); consol
   await m.click('.ed-switch [data-tab="preview"]');
   await m.screenshot({ path: path.join(SHOTS, "preview-375.png"), fullPage: true });
 
+  await m.goto(base + "cash/", { waitUntil: "networkidle" });
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone cash book");
+  await m.screenshot({ path: path.join(SHOTS, "cash-375.png"), fullPage: true });
+  await m.goto(base + "cash/#year");
+  await m.waitForTimeout(200);
+  check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone year-end summary");
+  await m.screenshot({ path: path.join(SHOTS, "cash-year-375.png"), fullPage: true });
   await m.goto(base + "customers/", { waitUntil: "networkidle" });
   check(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "no sideways scroll in the phone customer book");
   await m.screenshot({ path: path.join(SHOTS, "customers-375.png"), fullPage: true });
