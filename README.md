@@ -10,6 +10,7 @@ Honest, private, pay-once tools for small businesses. Live at https://daxtinenic
 | `invoices/` | Quotes & Invoices, the first tool |
 | `customers/` | Customer Book: notes, follow-ups, contact import and statements on the shared customer list |
 | `pricing/` | Price Builder: cost out a product or job and save the price to the shared items list |
+| `shopfront/` | Shopfront Studio: builds a one-page business website from the shared profile and items, downloaded as one self-contained `index.html` |
 | `settings/` | My business: shared business details, Pro license, backup and restore |
 | `about/`, `privacy/`, `terms/`, `refunds/` | About and legal pages |
 | `shared/` | Code and styles every tool uses |
@@ -17,7 +18,7 @@ Honest, private, pay-once tools for small businesses. Live at https://daxtinenic
 ### Shared pieces (every tool loads these)
 
 - `shared/chrome.js`: header, footer, the one list of tools (`FM.tools`), toast and confirm dialog. Builds links from the site root, so the site works under `/fair-measure/` and on a custom domain.
-- `shared/store.js`: the business book. One store in the browser's localStorage (keys `fm.v1.*`) holding the business profile, `customers`, `items`, `documents` and `costings` (Price Builder). Tools share records through it, and one backup file holds everything. Money is whole cents.
+- `shared/store.js`: the business book. One store in the browser's localStorage (keys `fm.v1.*`) holding the business profile, `customers`, `items`, `documents`, `costings` (Price Builder) and `sites` (Shopfront Studio). Tools share records through it, and one backup file holds everything. Money is whole cents.
 - `shared/license.js`: Pro unlock. Set `checkoutUrl` and `organizationId` once the store exists; until then Pro shows "coming soon". Free limits live here too.
 - `shared/fm.css`, `shared/fonts/`: design tokens and self-hosted fonts (Fraunces and Source Sans 3, SIL Open Font License).
 
@@ -38,6 +39,7 @@ No build step, no framework, no third-party scripts, no cookies, no tracking. Ev
 node tests/calc.test.js        # invoice arithmetic
 node tests/pricing.test.js     # Price Builder arithmetic
 node tests/customers.test.js   # Customer Book logic
+node tests/shopfront.test.js   # Shopfront Studio site builder
 node tests/e2e.cjs             # browser test with Playwright (npm install first), screenshots in tests/shots/
 ```
 

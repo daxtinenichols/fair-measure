@@ -20,7 +20,7 @@
       blurb: "Money in, money out, miles driven, and how much to set aside for quarterly taxes." },
     { id: "shifts", name: "Shift Planner", path: "", status: "soon",
       blurb: "A simple staff schedule with swaps and sick-day cover, without per-person fees." },
-    { id: "shopfront", name: "Shopfront Studio", path: "", status: "soon",
+    { id: "shopfront", name: "Shopfront Studio", path: "shopfront/", status: "live",
       blurb: "A warm, simple website for your business, built from the details you've already entered." }
   ];
 
